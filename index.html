@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards · Medicina Nuclear</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:         #0E0F14;
+    --surface:    #16181F;
+    --surface2:   #1E2029;
+    --border:     #2A2D3A;
+    --border2:    #363A4A;
+    --text:       #E8EAF0;
+    --muted:      #7A7F96;
+    --faint:      #3A3F52;
+
+    /* accent por tema */
+    --lu-a: #7C6EFA;  --lu-b: #3A2FA8;  --lu-light: #2A265C;
+    --y90-a: #2EC4B0; --y90-b: #0D6B61; --y90-light: #0D2E2A;
+    --card-a: #F97066; --card-b: #8A2A1E; --card-light: #2E1410;
+
+    --radius: 14px;
+    --radius-sm: 8px;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 20px 24px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--lu-a), var(--y90-a));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .logo-text {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .logo-sub {
+    font-size: 11px;
+    color: var(--faint);
+    margin-top: 1px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .total-pill {
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 20px 24px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 8px 16px 12px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: color .15s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+  }
+  .tab[data-topic="all"].active::after   { background: linear-gradient(90deg, var(--lu-a), var(--y90-a)); }
+  .tab[data-topic="lu"].active::after    { background: var(--lu-a); }
+  .tab[data-topic="y90"].active::after   { background: var(--y90-a); }
+  .tab[data-topic="card"].active::after  { background: var(--card-a); }
+
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 0 5px;
+    margin-left: 6px;
+  }
+  .tab[data-topic="all"]  .tab-count { background: var(--surface2); color: var(--muted); }
+  .tab[data-topic="lu"]   .tab-count { background: var(--lu-light);  color: var(--lu-a); }
+  .tab[data-topic="y90"]  .tab-count { background: var(--y90-light); color: var(--y90-a); }
+  .tab[data-topic="card"] .tab-count { background: var(--card-light);color: var(--card-a); }
+
+  /* ── FILTROS SUBTEMA ── */
+  .subfilter {
+    display: flex;
+    gap: 6px;
+    padding: 14px 24px 0;
+    flex-wrap: wrap;
+    min-height: 46px;
+  }
+  .sf-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .sf-btn:hover { border-color: var(--border2); color: var(--text); }
+  .sf-btn.active { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+
+  /* ── ÁREA CENTRAL ── */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 24px 0;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ── CARD ── */
+  .card-shell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    position: relative;
+    transition: border-color .2s;
+    flex: 1;
+  }
+  .card-shell:hover { border-color: var(--border2); }
+
+  .card-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+  .badge-lu   { background: var(--lu-light);   color: var(--lu-a); }
+  .badge-y90  { background: var(--y90-light);  color: var(--y90-a); }
+  .badge-card { background: var(--card-light); color: var(--card-a); }
+
+  .card-title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 18px;
+    color: var(--text);
+  }
+  .card-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: -14px;
+    margin-bottom: 18px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .section-content {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .section-content ul { padding-left: 18px; }
+  .section-content li { margin-bottom: 4px; }
+  .section-content strong { color: #fff; font-weight: 500; }
+
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Pills */
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* Highlight boxes */
+  .hl {
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 6px 0;
+  }
+  .hl-lu   { background: var(--lu-light);   border-left: 3px solid var(--lu-a);   color: #c4beff; }
+  .hl-y90  { background: var(--y90-light);  border-left: 3px solid var(--y90-a);  color: #8dece4; }
+  .hl-card { background: var(--card-light); border-left: 3px solid var(--card-a); color: #fdb0a8; }
+  .hl-warn { background: #221A0A; border-left: 3px solid #EF9F27; color: #f5c976; }
+
+  /* Formula */
+  .formula {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--y90-a);
+    margin: 6px 0;
+  }
+
+  /* Steps */
+  .step-row { display: flex; align-items: flex-start; gap: 10px; margin: 6px 0; }
+  .step-num {
+    min-width: 22px; height: 22px; border-radius: 50%;
+    background: var(--lu-light); color: var(--lu-a);
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px; flex-shrink: 0;
+  }
+  .step-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+  /* Tags bottom */
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .tag {
+    font-size: 11px; padding: 3px 9px; border-radius: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--faint);
+  }
+
+  /* ── NAVEGACIÓN ── */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px 24px;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    gap: 12px;
+  }
+  .nav-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, border-color .15s;
+    flex-shrink: 0;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--surface2); border-color: var(--border2); }
+  .nav-btn:disabled { opacity: .25; cursor: default; }
+
+  .dots-area { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; flex: 1; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: transparent;
+    cursor: pointer;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .dot.active { background: var(--muted); }
+
+  .counter {
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 52px;
+    text-align: center;
+  }
+
+  /* KB hint */
+  .kb-hint {
+    text-align: center;
+    font-size: 11px;
+    color: var(--faint);
+    padding-bottom: 16px;
+  }
+
+  @media (max-width: 560px) {
+    header, .subfilter, main, .nav-bar { padding-left: 14px; padding-right: 14px; }
+    .tabs { padding-left: 14px; }
+    .row2 { grid-template-columns: 1fr; }
+    .card-title { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚛</div>
+    <div>
+      <div class="logo-text">Medicina Nuclear</div>
+      <div class="logo-sub">Flashcards de estudio</div>
+    </div>
+  </div>
+  <div class="total-pill" id="totalPill">20 tarjetas</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-topic="all" onclick="setTopic('all',this)">
+    Todas <span class="tab-count">20</span>
+  </button>
+  <button class="tab" data-topic="lu" onclick="setTopic('lu',this)">
+    Lutecio-177 <span class="tab-count">9</span>
+  </button>
+  <button class="tab" data-topic="y90" onclick="setTopic('y90',this)">
+    Itrio-90 <span class="tab-count">6</span>
+  </button>
+  <button class="tab" data-topic="card" onclick="setTopic('card',this)">
+    Cardiología <span class="tab-count">6</span>
+  </button>
+</div>
+
+<div class="subfilter" id="subfilter"></div>
+
+<main>
+  <div class="card-shell" id="cardShell"></div>
+</main>
+
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="move(-1)" disabled>&#8592;</button>
+  <div class="dots-area" id="dotsArea"></div>
+  <span class="counter" id="counter"></span>
+  <button class="nav-btn" id="nextBtn" onclick="move(1)">&#8594;</button>
+</div>
+<div class="kb-hint">← → para navegar</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATOS — todas las flashcards
+// ═══════════════════════════════════════════════
+const CARDS = [
+
+  // ── LUTECIO-177 ──────────────────────────────
+  {
+    topic: 'lu', sub: 'gen', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Propiedades físicas',
+    render: () => `
+      <div class="section-label">Características nucleares</div>
+      <div class="section-content"><ul>
+        <li><strong>Tipo:</strong> Lantánido, emisor beta negativo + gamma</li>
+        <li><strong>Energía beta máxima:</strong> 0,497 MeV</li>
+        <li><strong>Energía beta promedio:</strong> 0,133 MeV</li>
+        <li><strong>Fotones gamma:</strong> 208 keV (6,7 %) · 103 keV (3,2 %)</li>
+        <li><strong>Vida media:</strong> 6,6 días</li>
+        <li><strong>Producto de desintegración:</strong> Hafnio-177 estable</li>
+        <li><strong>Alcance en tejido:</strong> 1–2 mm (acción localizada)</li>
+      </ul></div>
+      <div class="tag-row">
+        <span class="tag">Beta terapéutico</span>
+        <span class="tag">Gamma diagnóstico</span>
+        <span class="tag">Teragnostic</span>
+      </div>`
+  },
+  {
+    topic: 'lu', sub: 'indicaciones', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Indicaciones clínicas',
+    render: () => `
+      <div class="section-label">Lu-DOTATATE</div>
+      <div class="section-content">Tumores neuroendocrinos: GEP-NET, pulmonar, feocromocitoma, paraganglioma, timoma, meningioma, carcinoma medular de tiroides</div>
+      <hr class="divider">
+      <div class="section-label">Lu-PSMA-617</div>
+      <div class="section-content">Cáncer de próstata metastásico resistente a la castración</div>
+      <hr class="divider">
+      <div class="hl hl-lu">Preferido para <strong>tumores &lt; 2 cm</strong> — menor alcance beta. Más seguro a nivel renal que el Itrio-90.</div>
+      <div class="tag-row">
+        <span class="tag">TNE</span><span class="tag">Próstata PSMA</span><span class="tag">DOTATATE</span>
+      </div>`
+  },
+  {
+    topic: 'lu', sub: 'preterapia', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Evaluación preterapia',
+    render: () => `
+      <div class="section-content"><ul>
+        <li>Histopatología comprobada de TNE</li>
+        <li>Alta expresión de receptores de somatostatina (Ga68-DOTA-péptido PET/CT)</li>
+        <li>Karnofsky &gt; 60 % · ECOG ≤ 2</li>
+        <li>Alta o moderada diferenciación tumoral</li>
+        <li>Ki-67 / índice mitótico ≤ 20 %</li>
+        <li>Laboratorio: hemograma, función hepática, renal, electrolitos</li>
+      </ul></div>
+      <div class="hl hl-warn" style="margin-top:12px;">Suspender <strong>análogos de somatostatina</strong> previo al tratamiento</div>
+      <div class="tag-row">
+        <span class="tag">Karnofsky</span><span class="tag">ECOG</span><span class="tag">Ki-67</span><span class="tag">Receptor somatostatina</span>
+      </div>`
+  },
+  {
+    topic: 'lu', sub: 'contraindicaciones', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Contraindicaciones',
+    render: () => `
+      <div class="section-label">Absolutas</div>
+      <div class="hl hl-card">Embarazo · enfermedad aguda severa concomitante · trastorno psiquiátrico severo inmanejable</div>
+      <div class="section-label" style="margin-top:14px;">Relativas</div>
+      <div class="section-content"><ul>
+        <li>Lactancia</li>
+        <li>Insuficiencia renal severa (creatinina ≥ 1,7 mg/dl)</li>
+        <li>Clearance de creatinina reducido</li>
+      </ul></div>
+      <div class="tag-row">
+        <span class="tag">Embarazo</span><span class="tag">Función renal</span><span class="tag">Lactancia</span>
+      </div>`
+  },
+  {
+    topic: 'lu', sub: 'dosificacion', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Actividad y esquema de dosificación',
+    render: () => `
+      <div class="row2">
+        <div>
+          <div class="section-label">Dosis por ciclo</div>
+          <div class="section-content">18,5–37 MBq/kg<br><span style="color:var(--muted);font-size:12px;">→ 150–200 mCi (5,55–7,4 GBq)</span></div>
+        </div>
+        <div>
+          <div class="section-label">N° de ciclos</div>
+          <div class="section-content">3 – 5 dosis</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="row2">
+        <div>
+          <div class="section-label">Intervalo entre ciclos</div>
+          <div class="section-content">Cada 6–12 semanas<br><span style="color:var(--muted);font-size:12px;">(habitualmente ~8 sem)</span></div>
+        </div>
+        <div>
+          <div class="section-label">Dosis máx. acumulada</div>
+          <div class="section-content"><strong>29,6 GBq</strong> (800 mCi)</div>
+        </div>
+      </div>
+      <div class="hl hl-lu" style="margin-top:14px;">Pedir con <strong>15–20 días</strong> de anticipación mediante receta médica</div>
+      <div class="tag-row">
+        <span class="tag">GBq</span><span class="tag">mCi</span><span class="tag">Ciclos</span><span class="tag">Acumulada</span>
+      </div>`
+  },
+  {
+    topic: 'lu', sub: 'protocolo', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Protocolo de administración',
+    render: () => `
+      <div class="section-label">Condiciones de hospitalización</div>
+      <div class="section-content">Paciente en aislamiento · régimen cero · reposo absoluto</div>
+      <hr class="divider">
+      <div class="section-label">Vía 1 — protección renal</div>
+      <div class="hl hl-lu">Aminoácidos 8,5–12 % (1500 ml) + SO₄Mg 10 % en 8 h → iniciar <strong>30–60 min antes</strong> del radiofármaco</div>
+      <div class="section-label" style="margin-top:12px;">Vía 2 — permeabilidad</div>
+      <div class="section-content">Suero fisiológico 500 cc en 12 h</div>
+      <hr class="divider">
+      <div class="section-label">Infusión del radiofármaco</div>
+      <div class="section-content">Lu-177-DOTATATE 20 ml · <strong>bomba de infusión a 20 ml/h</strong> (1 hora) · control GM sobre tórax (~70 mR/h)</div>
+      <hr class="divider">
+      <div class="section-label">Premedicación</div>
+      <div class="section-content">Dexametasona 4 mg ev (inicio y día siguiente) · Amilene 8 mg ev c/8 h</div>
+      <div class="tag-row">
+        <span class="tag">Aminoácidos</span><span class="tag">Bomba infusión</span><span class="tag">Contador GM</span>
+      </div>`
+  },
+  {
+    topic: 'lu', sub: 'imagenes', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Adquisición de imágenes post-terapia',
+    render: () => `
+      <div class="row2">
+        <div>
+          <div class="section-label">Lapso inyección – examen</div>
+          <div class="section-content"><strong>18 horas</strong></div>
+        </div>
+        <div>
+          <div class="section-label">Colimador</div>
+          <div class="section-content">Mediana energía (tipo I-131)</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="section-label">Ventanas energéticas</div>
+      <div class="formula">90 keV (ventana 100%) · 208 keV (ventana 30%) · 103 keV · 74 keV</div>
+      <hr class="divider">
+      <div class="section-label">Proyecciones</div>
+      <div class="section-content">Imágenes cuerpo entero AP y PA</div>
+      <div class="hl hl-lu" style="margin-top:12px;">Distribución esperada similar al estudio de Ga-68 preterapia, con menor resolución</div>
+      <div class="tag-row">
+        <span class="tag">Colimador ME</span><span class="tag">Cuerpo entero</span><span class="tag">18 horas</span>
+      </div>`
+  },
+  // Card general Lu: propiedades -> reordenado arriba como primero
+  // Añadimos las 2 cards de generalidades fusionadas como comparativa
+  {
+    topic: 'lu', sub: 'gen', badge: 'badge-lu', badgeText: 'Lutecio-177',
+    title: 'Comparación Lu-177 vs Y-90 — propiedades físicas',
+    render: () => `
+      <div class="section-label">Lutecio-177</div>
+      <div class="section-content"><ul>
+        <li>Lantánido · beta negativo + <strong>gamma</strong></li>
+        <li>Energía beta max: 0,497 MeV · promedio: 0,133 MeV</li>
+        <li>Gamma: 208 keV (6,7 %) + 103 keV (3,2 %) → imagen directa</li>
+        <li>Vida media: <strong>6,6 días</strong></li>
+        <li>Alcance en tejido: <strong>1–2 mm</strong></li>
+        <li>Producto: Hafnio-177 estable</li>
+      </ul></div>
+      <hr class="divider">
+      <div class="section-label">Itrio-90</div>
+      <div class="section-content"><ul>
+        <li>Metal de transición · beta puro (<strong>sin gamma</strong>)</li>
+        <li>Energía beta max: 2,28 MeV · promedio: 0,93 MeV</li>
+        <li>Imagen solo por Bremsstrahlung o PET</li>
+        <li>Vida media: <strong>64,1 h (~2,7 días)</strong></li>
+        <li>Alcance en tejido: <strong>2–5 mm</strong></li>
+        <li>Producto: Zirconio-90 estable</li>
+      </ul></div>
+      <div class="tag-row">
+        <span class="tag">Teragnostic Lu</span><span class="tag">Beta puro Y90</span><span class="tag">Alta energía</span>
+      </div>`
+  },
+
+  // ── ITRIO-90 ─────────────────────────────────
+  {
+    topic: 'y90', sub: 'indicaciones', badge: 'badge-y90', badgeText: 'Itrio-90',
+    title: 'Indicaciones clínicas',
+    render: () => `
+      <div class="section-content"><ul>
+        <li><strong>Radioembolización hepática (TARE-Y90):</strong> hepatocarcinoma, colangiocarcinoma intrahepático, metástasis hepáticas de CCR</li>
+        <li><strong>Tumores neuroendocrinos:</strong> Y90-DOTATOC / SMT487 (lesiones con receptores de somatostatina)</li>
+        <li><strong>Radioinmunoterapia:</strong> Ibritumomab tiuxetán — linfoma no Hodgkin</li>
+        <li><strong>Sinoviortesis:</strong> citrato de Itrio coloidal — artritis reumatoide severa de rodilla</li>
+      </ul></div>
+      <div class="hl hl-y90" style="margin-top:12px;">Preferido para <strong>tumores &gt; 2 cm</strong> — mayor alcance beta</div>
+      <div class="tag-row">
+        <span class="tag">TARE</span><span class="tag">TNE</span><span class="tag">Linfoma</span><span class="tag">Sinoviortesis</span>
+      </div>`
+  },
+  {
+    topic: 'y90', sub: 'microesferas', badge: 'badge-y90', badgeText: 'Itrio-90',
+    title: 'Microesferas Y90 — tipos comerciales',
+    render: () => `
+      <div class="section-label">TheraSphere (Boston Scientific)</div>
+      <div class="section-content"><ul>
+        <li>Microesfera de <strong>vidrio</strong></li>
+        <li>Tamaño: 25 µm promedio</li>
+        <li>Y90 incorporado en el interior</li>
+        <li>400.000 partículas/GBq · viales 3–20 GBq</li>
+      </ul></div>
+      <hr class="divider">
+      <div class="section-label">SIR-Spheres (Sirtex)</div>
+      <div class="section-content"><ul>
+        <li>Microesfera de <strong>resina</strong></li>
+        <li>Tamaño: 32,5 µm promedio</li>
+        <li>Y90 impregnado en superficie</li>
+        <li>40–80 millones/vial · viales de 3 GBq ±10 %</li>
+      </ul></div>
+      <div class="hl hl-y90" style="margin-top:12px;">Ambas se inyectan por <strong>arteria hepática</strong> — irradiatión tumoral desde el interior</div>
+      <div class="tag-row">
+        <span class="tag">TheraSphere</span><span class="tag">SIR-Spheres</span><span class="tag">Vidrio</span><span class="tag">Resina</span>
+      </div>`
+  },
+  {
+    topic: 'y90', sub: 'dosimetria', badge: 'badge-y90', badgeText: 'Itrio-90',
+    title: 'Dosimetría y actividad (TARE)',
+    render: () => `
+      <div class="section-label">Dosis habitual Y90-DOTA</div>
+      <div class="formula">75–100 mCi (2,78–3,7 GBq)</div>
+      <hr class="divider">
+      <div class="section-label">Modelos de cálculo</div>
+      <div class="section-content">MIRD/BSA (resina) · PARTITION (vidrio)<br>Variables: volumetría hepática, fracción tumoral, fracción de shunt pulmonar (FSP)</div>
+      <hr class="divider">
+      <div class="hl hl-warn">FSP debe ser <strong>&lt; 20 %</strong> (dosis pulmonar &lt; 30 Gy/ciclo · &lt; 50 Gy acumulado)</div>
+      <div class="section-content" style="margin-top:10px; font-size:12px; color:var(--muted);">Microesferas pedidas con al menos 3 días de anticipación al proveedor</div>
+      <div class="tag-row">
+        <span class="tag">PARTITION</span><span class="tag">BSA</span><span class="tag">FSP</span><span class="tag">GBq</span>
+      </div>`
+  },
+  {
+    topic: 'y90', sub: 'procedimiento', badge: 'badge-y90', badgeText: 'Itrio-90',
+    title: 'Procedimiento TARE — etapas',
+    render: () => `
+      <div class="section-label">1ª sesión — planificación</div>
+      <div class="section-content">Mapeo vascular con angiografía hepática · simulación con 99mTc-MAA · SPECT-CT · cálculo FSP · dosimetría personalizada · solicitud de microesferas</div>
+      <hr class="divider">
+      <div class="section-label">2ª sesión — tratamiento (1 semana después)</div>
+      <div class="hl hl-y90">TARE-Y90 por catéter transarterial + <strong>PET-CT post-inmediato</strong></div>
+      <hr class="divider">
+      <div class="section-label">Seguimiento</div>
+      <div class="section-content"><ul>
+        <li><strong>2 meses:</strong> RM de abdomen (disminución tumoral, necrosis, vascularización)</li>
+        <li>Controles a los 3 y 6 meses</li>
+      </ul></div>
+      <div class="tag-row">
+        <span class="tag">99mTc-MAA</span><span class="tag">Angiografía</span><span class="tag">RM control</span>
+      </div>`
+  },
+  {
+    topic: 'y90', sub: 'contraindicaciones', badge: 'badge-y90', badgeText: 'Itrio-90',
+    title: 'Contraindicaciones del TARE-Y90',
+    render: () => `
+      <div class="section-content"><ul>
+        <li><strong>Insuficiencia hepática severa:</strong> Child-Pugh &gt; 7 o bilirrubina &gt; 2–3 mg/dL</li>
+        <li><strong>Shunt hepatopulmonar alto:</strong> FSP &gt; 20 % (riesgo de neumonitis por radiación)</li>
+        <li><strong>Reflujo gastrointestinal:</strong> imposibilidad de evitar migración de microesferas a estómago/páncreas</li>
+        <li><strong>Embarazo y lactancia:</strong> contraindicación absoluta</li>
+      </ul></div>
+      <div class="tag-row">
+        <span class="tag">Child-Pugh</span><span class="tag">Shunt</span><span class="tag">Embarazo</span>
+      </div>`
+  },
+  {
+    topic: 'y90', sub: 'imagenes', badge: 'badge-y90', badgeText: 'Itrio-90',
+    title: 'Imágenes con Itrio-90',
+    render: () => `
+      <div class="hl hl-warn">El Y90 es <strong>beta puro</strong> — no emite gamma directa. La imagen requiere técnicas indirectas.</div>
+      <hr class="divider">
+      <div class="section-label">Bremsstrahlung (cámara gamma)</div>
+      <div class="section-content">Partículas beta se frenan en tejido generando rayos X continuos · colimador alta energía</div>
+      <div class="formula">Ventanas: 75 keV + 229 keV (ventana 100 %)</div>
+      <hr class="divider">
+      <div class="section-label">PET</div>
+      <div class="section-content">Pequeña fracción de desintegraciones genera pares positrón-electrón → fotones <strong>511 keV</strong></div>
+      <hr class="divider">
+      <div class="section-label">Lapso inyección – examen</div>
+      <div class="section-content"><strong>24 horas</strong></div>
+      <div class="tag-row">
+        <span class="tag">Bremsstrahlung</span><span class="tag">PET Y90</span><span class="tag">511 keV</span><span class="tag">24 horas</span>
+      </div>`
+  },
+
+  // ── CARDIOLOGÍA NUCLEAR ───────────────────────
+  {
+    topic: 'card', sub: 'vg', badge: 'badge-card', badgeText: 'Ventriculografía Isotópica',
+    title: 'Protocolo completo',
+    render: () => `
+      <div class="row2">
+        <div>
+          <div class="section-label">Radiofármaco</div>
+          <div class="section-content">Glóbulos rojos autólogos marcados con <strong>Tc-99m</strong></div>
+        </div>
+        <div>
+          <div class="section-label">Dosis</div>
+          <div class="section-content"><strong>20–30 mCi</strong> e.v.</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="section-label">Premedicación</div>
+      <div class="hl hl-card"><strong>KClO₄</strong> (perclorato de K) — 2 h antes → bloquea captación tiroidea del Tc libre</div>
+      <div class="hl hl-card" style="margin-top:6px;"><strong>SnCl₂</strong> (cloruro estanoso, según peso/talla) — 20 min antes del Tc → hace permeable la membrana del GR</div>
+      <hr class="divider">
+      <div class="section-label">Secuencia marcación in vivo</div>
+      <div class="step-row"><span class="step-num">1</span><span class="step-text">Inyección de SnCl₂ i.v. según peso/talla</span></div>
+      <div class="step-row"><span class="step-num">2</span><span class="step-text">Esperar 20 min (Sn²⁺ ingresa al GR)</span></div>
+      <div class="step-row"><span class="step-num">3</span><span class="step-text">Inyección TcO₄⁻ (pertecnetato) 25–30 mCi</span></div>
+      <div class="step-row"><span class="step-num">4</span><span class="step-text">Tc reducido por Sn intracelular → se une a Hb → GR marcados</span></div>
+      <div class="step-row"><span class="step-num">5</span><span class="step-text">Lapso inyección–examen: <strong>inmediato</strong></span></div>
+      <hr class="divider">
+      <div class="section-label">Adquisición</div>
+      <div class="pill-row">
+        <span class="pill">Sincronización ECG (onda R)</span>
+        <span class="pill">Matriz 64×64</span>
+        <span class="pill">8–32 frames entre R-R</span>
+        <span class="pill">Proyección OAI</span>
+        <span class="pill">Proyección OAD (45° desde OAI)</span>
+      </div>
+      <hr class="divider">
+      <div class="section-label">Fórmula FE</div>
+      <div class="formula">FE = (Cuentas ED − Cuentas ES) × 100 / Cuentas ED &nbsp;→ Normal ≥ 55 %</div>
+      <div class="tag-row">
+        <span class="tag">FE</span><span class="tag">Cardiotoxicidad QT</span><span class="tag">Función valvular</span>
+      </div>`
+  },
+  {
+    topic: 'card', sub: 'pm', badge: 'badge-card', badgeText: 'Perfusión Miocárdica',
+    title: 'Estrés fisiológico — Test de Bruce',
+    render: () => `
+      <div class="row2">
+        <div>
+          <div class="section-label">Radiofármaco</div>
+          <div class="section-content"><strong>Tc-99m MIBI</strong><br><span style="color:var(--muted);font-size:12px;">Lipofílico-catiónico · No redistribuye</span></div>
+        </div>
+        <div>
+          <div class="section-label">Dosis</div>
+          <div class="section-content">2 días: 15–20 mCi c/fase<br>1 día: 8 mCi estrés · 30 mCi reposo</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="section-label">Preparación</div>
+      <div class="pill-row">
+        <span class="pill">Ayuno 12 h (mín. 4–6 h)</span>
+        <span class="pill">Sin xantinas 24 h antes</span>
+        <span class="pill">Suspender β-bloq. 48 h</span>
+        <span class="pill">Suspender antag. Ca y nitratos 48 h</span>
+      </div>
+      <hr class="divider">
+      <div class="hl hl-y90">MIBI se inyecta al alcanzar el <strong>85 % de la FCMT</strong>. Ejercicio continúa 1 min post-inyección.</div>
+      <div class="section-label" style="margin-top:12px;">Lapso inyección–examen</div>
+      <div class="section-content"><strong>45 minutos</strong> (reduce actividad hepática sobre pared inferior)</div>
+      <hr class="divider">
+      <div class="section-label">Adquisición SPECT</div>
+      <div class="pill-row">
+        <span class="pill">Gatillado ECG</span>
+        <span class="pill">Detector 90°</span>
+        <span class="pill">Zoom 1.78</span>
+        <span class="pill">32 vistas/detector · 64 totales</span>
+        <span class="pill">Estrés 30 s/vista · Reposo 25 s/vista</span>
+        <span class="pill">Ciclo R-R 8 cuadros</span>
+      </div>
+      <div class="tag-row">
+        <span class="tag">Bruce</span><span class="tag">FCMT</span><span class="tag">SPECT gatillado</span>
+      </div>`
+  },
+  {
+    topic: 'card', sub: 'pm', badge: 'badge-card', badgeText: 'Perfusión Miocárdica',
+    title: 'Estrés farmacológico — Dipiridamol',
+    render: () => `
+      <div class="row2">
+        <div>
+          <div class="section-label">Agente</div>
+          <div class="section-content"><strong>Dipiridamol</strong><br>Vida media 90–130 min</div>
+        </div>
+        <div>
+          <div class="section-label">Radiofármaco</div>
+          <div class="section-content">Tc-99m MIBI (mismos esquemas)</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="section-label">Protocolo de administración</div>
+      <div class="formula">0.142 mg/kg/min × 4 min = 0.568 mg/kg total (e.v. continua)</div>
+      <div class="section-content" style="font-size:13px; margin-top:6px;">MIBI se inyecta al minuto 8. Handgrip isométrico min 6–10 al 50 % presión inicial.</div>
+      <hr class="divider">
+      <div class="section-label">Mecanismo</div>
+      <div class="section-content" style="font-size:13px;">Inhibe recaptación de adenosina → mayor concentración extracelular → receptor A₂A → adenil-ciclasa → canales K⁺ → inhibe Ca²⁺ → vasodilatación (acción <strong>indirecta</strong>)</div>
+      <hr class="divider">
+      <div class="hl hl-card"><strong>Antídoto — Aminofilina:</strong> ½ amp (125 mg) e.v. en 2 min de rutina. RAM significativa: 1–2 mg/kg. Niños: 5–6 mg/kg en 20–30 min.</div>
+      <div class="hl hl-warn" style="margin-top:6px;"><strong>Sin xantinas</strong> las 24 h previas. 3–6 tazas/día bloquean 50 % de receptores de adenosina.</div>
+      <div class="hl hl-card" style="margin-top:6px;">Asmáticos con broncoespasmo: <strong>NO usar Dipiridamol ni Adenosina → usar Dobutamina</strong></div>
+      <div class="tag-row">
+        <span class="tag">A₂A</span><span class="tag">Aminofilina antídoto</span><span class="tag">Acción indirecta</span>
+      </div>`
+  },
+  {
+    topic: 'card', sub: 'pm', badge: 'badge-card', badgeText: 'Perfusión Miocárdica',
+    title: 'Estrés farmacológico — Adenosina y Dobutamina',
+    render: () => `
+      <div class="section-label">Adenosina</div>
+      <div class="formula">140 µg/kg/min durante 6 minutos</div>
+      <div class="section-content" style="font-size:13px; margin-top:6px;">MIBI al <strong>minuto 3</strong> de la infusión · Lapso inyección–examen: 45 min · Vida media &lt;10 s</div>
+      <div class="hl hl-y90" style="margin-top:8px;">Actúa <strong>directamente</strong> sobre músculo liso vascular → receptor A₂A (a diferencia del Dipiridamol que actúa de forma indirecta). Aminofilina raramente necesaria.</div>
+      <hr class="divider">
+      <div class="section-label">Dobutamina — indicación especial</div>
+      <div class="hl hl-card">Para <strong>asmáticos con broncoespasmo</strong> contraindicados a Dipiridamol y Adenosina</div>
+      <div class="formula" style="margin-top:10px;">Inicio: 5–10 µg/kg/min → ↑ c/3 min de 5–10 µg/kg/min → hasta 85% FCMT</div>
+      <div class="section-content" style="font-size:13px; margin-top:6px;">Infusión continúa 2 min post-inyección trazador</div>
+      <div class="hl hl-warn" style="margin-top:8px;"><strong>Atropina</strong> si no se alcanza FCMT: 0.25 mg i.v. · repetir 1–3 veces · separadas 1–2 min</div>
+      <div class="tag-row">
+        <span class="tag">Adenosina directa</span><span class="tag">Dobutamina asmáticos</span><span class="tag">Atropina</span>
+      </div>`
+  },
+  {
+    topic: 'card', sub: 'vm', badge: 'badge-card', badgeText: 'Viabilidad Miocárdica',
+    title: 'Cintigrama de viabilidad',
+    render: () => `
+      <div class="row2">
+        <div>
+          <div class="section-label">Radiofármaco</div>
+          <div class="section-content"><strong>Tc-99m MIBI</strong></div>
+        </div>
+        <div>
+          <div class="section-label">Rendimiento diagnóstico</div>
+          <div class="section-content">Sensib. y especif. <strong>&gt; 85 %</strong> en SCA</div>
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="section-label">Premedicación — fase nitritos</div>
+      <div class="hl hl-card"><strong>Isosorbide 10 mg sublingual</strong> previo a inyección. Paciente en decúbito dorsal o sentado. Vigilar hipotensión hasta la adquisición.</div>
+      <div class="section-content" style="font-size:12px; margin-top:6px; color:var(--muted);">No administrar en protocolo 1 día con Dipiridamol, ni si el paciente recibe terapia con ISS.</div>
+      <hr class="divider">
+      <div class="section-label">Criterio de viabilidad</div>
+      <div class="hl hl-card">Segmentos con captación <strong>&gt; 55 %</strong> y engrosamiento detectable → alta probabilidad de recuperar funcionalidad tras revascularización</div>
+      <hr class="divider">
+      <div class="section-label">Adquisición</div>
+      <div class="pill-row">
+        <span class="pill">Detector 90° · órbita no circular</span>
+        <span class="pill">32 vistas/detector · 30 s c/u</span>
+        <span class="pill">Zoom 1.78</span>
+        <span class="pill">Eje corto · ELV · ELH</span>
+      </div>
+      <hr class="divider">
+      <div class="hl hl-warn">Evitar contacto con niños y embarazadas por <strong>24 horas</strong> post examen</div>
+      <div class="tag-row">
+        <span class="tag">Isosorbide</span><span class="tag">55 % captación</span><span class="tag">Revascularización</span>
+      </div>`
+  }
+];
+
+// ═══════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════
+let topic = 'all';
+let sub   = 'all';
+let idx   = 0;
+
+const SUBS = {
+  all:  [{v:'all', l:'Todas'}],
+  lu:   [{v:'all',l:'Todas'},{v:'gen',l:'Generalidades'},{v:'indicaciones',l:'Indicaciones'},{v:'preterapia',l:'Preterapia'},{v:'contraindicaciones',l:'Contraindicaciones'},{v:'dosificacion',l:'Dosificación'},{v:'protocolo',l:'Protocolo'},{v:'imagenes',l:'Imágenes'}],
+  y90:  [{v:'all',l:'Todas'},{v:'indicaciones',l:'Indicaciones'},{v:'microesferas',l:'Microesferas'},{v:'dosimetria',l:'Dosimetría'},{v:'procedimiento',l:'Procedimiento TARE'},{v:'contraindicaciones',l:'Contraindicaciones'},{v:'imagenes',l:'Imágenes'}],
+  card: [{v:'all',l:'Todas'},{v:'vg',l:'Ventriculografía'},{v:'pm',l:'Perfusión Miocárdica'},{v:'vm',l:'Viabilidad Miocárdica'}]
+};
+
+function filtered() {
+  return CARDS.filter(c => {
+    const matchTopic = topic === 'all' || c.topic === topic;
+    const matchSub   = sub   === 'all' || c.sub   === sub;
+    return matchTopic && matchSub;
+  });
+}
+
+function setTopic(t, btn) {
+  topic = t;
+  sub   = 'all';
+  idx   = 0;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSubfilter();
+  render();
+}
+
+function setSub(s) {
+  sub = s;
+  idx = 0;
+  renderSubfilter();
+  render();
+}
+
+function move(d) {
+  const list = filtered();
+  idx = Math.max(0, Math.min(idx + d, list.length - 1));
+  render();
+}
+
+function goTo(i) { idx = i; render(); }
+
+// ── Subfilter ──
+function renderSubfilter() {
+  const sf = document.getElementById('subfilter');
+  const opts = SUBS[topic] || SUBS.all;
+  sf.innerHTML = opts.map(o => `
+    <button class="sf-btn ${sub === o.v ? 'active' : ''}" onclick="setSub('${o.v}')">${o.l}</button>
+  `).join('');
+}
+
+// ── Card + nav ──
+function render() {
+  const list = filtered();
+  const total = list.length;
+
+  document.getElementById('totalPill').textContent = total + ' tarjeta' + (total !== 1 ? 's' : '');
+
+  if (!list.length) {
+    document.getElementById('cardShell').innerHTML = '<div style="color:var(--muted); text-align:center; padding:40px 0;">Sin tarjetas en este filtro</div>';
+    document.getElementById('counter').textContent = '0 / 0';
+    document.getElementById('dotsArea').innerHTML = '';
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = true;
+    return;
+  }
+
+  if (idx >= total) idx = total - 1;
+  const c = list[idx];
+
+  document.getElementById('cardShell').innerHTML = `
+    <span class="card-badge ${c.badge}">${c.badgeText}</span>
+    <div class="card-title">${c.title}</div>
+    ${c.sub2 ? `<div class="card-sub">${c.sub2}</div>` : ''}
+    ${c.render()}
+  `;
+
+  document.getElementById('counter').textContent = `${idx + 1} / ${total}`;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = idx === total - 1;
+
+  const dots = document.getElementById('dotsArea');
+  dots.innerHTML = list.map((_, i) =>
+    `<div class="dot ${i === idx ? 'active' : ''}" onclick="goTo(${i})" title="Tarjeta ${i+1}"></div>`
+  ).join('');
+}
+
+// ── Teclado ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') move(1);
+  if (e.key === 'ArrowLeft')  move(-1);
+});
+
+// ── Init ──
+renderSubfilter();
+render();
+</script>
+</body>
+</html>
